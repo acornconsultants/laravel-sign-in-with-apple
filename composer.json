@@ -17,7 +17,8 @@
     },
     "require": {
         "illuminate/support": "~5.7 || ^6.0 || ^7.0",
-        "laravel/socialite": "^4.3"
+        "laravel/socialite": "^4.3",
+        "firebase/php-jwt": "~5.0"
     },
     "require-dev": {
         "orchestra/testbench-browser-kit": "^5.0",

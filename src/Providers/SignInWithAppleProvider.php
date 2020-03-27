@@ -7,6 +7,10 @@ use Laravel\Socialite\Two\AbstractProvider;
 use Laravel\Socialite\Two\InvalidStateException;
 use Laravel\Socialite\Two\ProviderInterface;
 use Laravel\Socialite\Two\User;
+use GuzzleHttp\Client;
+use \Firebase\JWT\JWT;
+use \Firebase\JWT\JWK;
+use Illuminate\Support\Facades\Log;
 
 class SignInWithAppleProvider extends AbstractProvider implements ProviderInterface
 {
@@ -118,6 +122,48 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
                 "id" => $user["sub"],
                 "name" => $fullName ?? null,
                 "email" => $user["email"] ?? null,
+            ]);
+    }
+
+    protected function decodeJwt($jwt)
+    {
+        return JWT::decode($jwt, $this->getJwksFromApple(), ["RS256"]);
+    }
+
+    private function getJwksFromApple()
+    {
+        $response = $this->getHttpClient()->get("https://appleid.apple.com/auth/keys");
+
+        $data = $response->getBody();
+
+        Log::debug(print_r($data, true));
+
+        return $data;
+    }
+
+    protected function verifyJwtData($jwtData)
+    {
+        $config = $app['config']['services.sign_in_with_apple'];
+
+        if ($jwtData["iss"] != "https://appleid.apple.com") {
+            throw new \Exception("Invalid issuer. Check that security has not been compromised.");
+        }
+
+        if ($jwtData["aud"] != $config['app_id']) {
+            throw new \Exception("App Id does not match aud variable in JWT. Check that security has not been compromised.");
+        }
+    }
+
+    public function userFromJwt($jwt)
+    {
+        $data = $this->verifyJwtData($this->decodeJwt($jwt));
+
+        return (new User)
+            ->setToken($jwt)
+            ->map([
+                "id" => $data["sub"],
+                "name" => '',
+                "email" => $data["email"]
             ]);
     }
 }

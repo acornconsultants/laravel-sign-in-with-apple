@@ -6,5 +6,6 @@ return [
         "redirect" => env("SIGN_IN_WITH_APPLE_REDIRECT"),
         "client_id" => env("SIGN_IN_WITH_APPLE_CLIENT_ID"),
         "client_secret" => env("SIGN_IN_WITH_APPLE_CLIENT_SECRET"),
+        "app_id" => env("SIGN_IN_WITH_APPLE_APP_ID"),
     ],
 ];
