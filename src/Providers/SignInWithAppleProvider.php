@@ -153,7 +153,7 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
     protected function mapUserToObject(array $user)
     {
         if (request()->filled("user")) {
-            $userRequest = json_decode(request("user"), true);
+            $userRequest = is_array(request("user")) ? $user : json_decode(request("user"), true);
 
             if (array_key_exists("name", $userRequest)) {
                 $user["name"] = $userRequest["name"];
