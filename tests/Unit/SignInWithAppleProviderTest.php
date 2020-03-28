@@ -89,7 +89,7 @@ class SignInWithAppleProviderTest extends UnitTestCase
 
     private function publicKeyArray()
     {
-        $json = <<<EOF
+        return <<<EOF
 {
   "keys": [
     {
@@ -111,8 +111,6 @@ class SignInWithAppleProviderTest extends UnitTestCase
   ]
 }
 EOF;
-
-        return json_decode($json, true);
     }
 
     private function getSignedJwt()
@@ -130,9 +128,7 @@ EOF;
             "nonce_supported" => true
         ];
 
-        $key = $this->publicKeyArray()['keys'][1];
-
-        return JWT::encode($payload, $this->pemPrivateKey(), $key['alg'], $key['kid']);
+        return JWT::encode($payload, $this->pemPrivateKey(), 'RS256', 'eXaunmL');
     }
 
     private function pemPublicKey()

@@ -208,7 +208,7 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
     {
         // Retrieve the JWKS from Apple's public API
         $response = $this->getHttpClient()->get($this->getKeyUrl());
-        $jwks = $response->getBody();
+        $jwks = json_decode($response->getBody(), true);
 
         if (!isset($jwks['keys']) || count($jwks['keys']) < 1) {
             throw new \Exception('Invalid JWKS format.');
