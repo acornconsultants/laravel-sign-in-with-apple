@@ -6,9 +6,17 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider as LaravelServiceProvider;
 use Laravel\Socialite\Contracts\Factory;
 
+/**
+ * Class ServiceProvider
+ * @package GeneaLabs\LaravelSignInWithApple\Providers
+ */
 class ServiceProvider extends LaravelServiceProvider
 {
+    /**
+     * @var bool
+     */
     protected $defer = false;
+
 
     public function boot()
     {

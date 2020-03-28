@@ -7,16 +7,30 @@ use Laravel\Socialite\Two\AbstractProvider;
 use Laravel\Socialite\Two\InvalidStateException;
 use Laravel\Socialite\Two\ProviderInterface;
 use Laravel\Socialite\Two\User;
-use GuzzleHttp\Client;
 use \Firebase\JWT\JWT;
 use \Firebase\JWT\JWK;
-use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 
+/**
+ * Class SignInWithAppleProvider
+ * @package GeneaLabs\LaravelSignInWithApple\Providers
+ */
 class SignInWithAppleProvider extends AbstractProvider implements ProviderInterface
 {
+    /**
+     * @var int
+     */
     protected $encodingType = PHP_QUERY_RFC3986;
+
+    /**
+     * @var string
+     */
     protected $scopeSeparator = " ";
 
+    /**
+     * @param string $state
+     * @return string
+     */
     protected function getAuthUrl($state)
     {
         return $this->buildAuthUrlFromBase(
@@ -25,6 +39,10 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
         );
     }
 
+    /**
+     * @param null $state
+     * @return array
+     */
     protected function getCodeFields($state = null)
     {
         $fields = [
@@ -42,11 +60,18 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
         return array_merge($fields, $this->parameters);
     }
 
+    /**
+     * @return string
+     */
     protected function getTokenUrl()
     {
         return "https://appleid.apple.com/auth/token";
     }
 
+    /**
+     * @param $code
+     * @return mixed
+     */
     public function getAccessToken($code)
     {
         $response = $this->getHttpClient()
@@ -65,6 +90,10 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
         return $this->parseAccessToken($response->getBody());
     }
 
+    /**
+     * @param $response
+     * @return mixed
+     */
     protected function parseAccessToken($response)
     {
         $data = $response->json();
@@ -72,6 +101,10 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
         return $data['access_token'];
     }
 
+    /**
+     * @param string $code
+     * @return array
+     */
     protected function getTokenFields($code)
     {
         $fields = parent::getTokenFields($code);
@@ -80,6 +113,10 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
         return $fields;
     }
 
+    /**
+     * @param string $token
+     * @return array|mixed
+     */
     protected function getUserByToken($token)
     {
         $claims = explode('.', $token)[1];
@@ -87,6 +124,9 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
         return json_decode(base64_decode($claims), true);
     }
 
+    /**
+     * @return \Laravel\Socialite\Contracts\User|User
+     */
     public function user()
     {
         $response = $this->getAccessTokenResponse($this->getCode());
@@ -101,6 +141,12 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
             ->setExpiresIn(Arr::get($response, 'expires_in'));
     }
 
+    /**
+     * Map user data to a User object.
+     *
+     * @param array $user
+     * @return User
+     */
     protected function mapUserToObject(array $user)
     {
         if (request()->filled("user")) {
@@ -125,45 +171,104 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
             ]);
     }
 
+    /**
+     * Decode the JWT and verify with Apple's public keys
+     *
+     * @param $jwt
+     * @return object
+     * @throws \Exception
+     */
     protected function decodeJwt($jwt)
     {
-        return JWT::decode($jwt, $this->getJwksFromApple(), ["RS256"]);
+        // Hard coding the alg for now since only RS256 is currently supported
+        $jwt = JWT::decode($jwt, $this->fetchPublicKeysFromApple(), ["RS256"]);
+
+        return (array) $jwt;
     }
 
-    private function getJwksFromApple()
+    /**
+     * URL for Apples Public Keys in JWKS format
+     *
+     * @return string
+     */
+    protected function getKeyUrl()
     {
-        $response = $this->getHttpClient()->get("https://appleid.apple.com/auth/keys");
-
-        $data = $response->getBody();
-
-        Log::debug(print_r($data, true));
-
-        return $data;
+        return "https://appleid.apple.com/auth/keys";
     }
 
-    protected function verifyJwtData($jwtData)
+    /**
+     * Fetch and parse the public keys from Apple. The returned
+     * keys are in JWKS format and they need to be parsed into
+     * a key set that the JWT decoder can handle
+     *
+     * @return mixed
+     * @throws \Exception
+     */
+    protected function fetchPublicKeysFromApple()
     {
-        $config = $app['config']['services.sign_in_with_apple'];
+        // Retrieve the JWKS from Apple's public API
+        $response = $this->getHttpClient()->get($this->getKeyUrl());
+        $jwks = $response->getBody();
 
+        if (!isset($jwks['keys']) || count($jwks['keys']) < 1) {
+            throw new \Exception('Invalid JWKS format.');
+        }
+
+        // Parse the JWKS returned from Apple into a Key set that the JWT decoder will understand
+        $keySet = JWK::parseKeySet($jwks);
+
+        return $keySet;
+    }
+
+    /**
+     * Make sure the issuer and audience data matches what we expect.
+     * This is an extra check and may be unnecessary, but it's not a bad idea.
+     *
+     * @param $jwtData
+     * @return bool
+     * @throws \Exception
+     */
+    public function verifyJwtData($jwtData)
+    {
+        if (!is_array($jwtData)) {
+            throw new InvalidArgumentException("Invalid JWT format. Type is " . gettype($jwtData));
+        }
+
+        // Check the issuer
         if ($jwtData["iss"] != "https://appleid.apple.com") {
-            throw new \Exception("Invalid issuer. Check that security has not been compromised.");
+            throw new InvalidArgumentException("Invalid issuer.");
         }
 
-        if ($jwtData["aud"] != $config['app_id']) {
-            throw new \Exception("App Id does not match aud variable in JWT. Check that security has not been compromised.");
+        // Check the audience: should be the app id from the Apple Developer Console
+        if ($jwtData["aud"] != config('services.sign_in_with_apple.app_id')) {
+            throw new InvalidArgumentException("App Id does not match aud variable in JWT.");
         }
+
+        return true;
     }
 
+    /**
+     * Take the JWT passed from the frontend and create
+     * a new User object.
+     *
+     * @param $jwt
+     * @return User
+     * @throws \Exception
+     */
     public function userFromJwt($jwt)
     {
-        $data = $this->verifyJwtData($this->decodeJwt($jwt));
+        $data = $this->decodeJwt($jwt);
+        if ($this->verifyJwtData($data)) {
 
-        return (new User)
-            ->setToken($jwt)
-            ->map([
-                "id" => $data["sub"],
-                "name" => '',
-                "email" => $data["email"]
-            ]);
+            return (new User)
+                ->setToken($jwt)
+                ->map([
+                    "id" => $data["sub"],
+                    "name" => '',
+                    "email" => $data["email"]
+                ]);
+        } else {
+            return null;
+        }
     }
 }
