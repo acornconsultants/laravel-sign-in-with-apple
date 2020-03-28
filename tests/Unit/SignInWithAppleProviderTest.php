@@ -64,7 +64,7 @@ class SignInWithAppleProviderTest extends UnitTestCase
         Socialite::driver('sign-in-with-apple')->verifyJwtData($data);
     }
 
-    public function testUserFromJwt()
+    public function testUserFromToken()
     {
         $driver = Socialite::driver('sign-in-with-apple');
 
@@ -81,7 +81,7 @@ class SignInWithAppleProviderTest extends UnitTestCase
 
         $jwt = $this->getSignedJwt();
 
-        $user = $driver->userFromJwt($jwt);
+        $user = $driver->userFromToken($jwt);
 
         $this->assertEquals('joe@anywhere.com', $user->getEmail());
         $this->assertEquals('001659.d0c393f689b245ac9eb18cbbc66ea9e6.1853', $user->getId());

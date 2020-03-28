@@ -15,8 +15,15 @@
     "suggest": {
         "genealabs/laravel-socialiter": "Automatic user resolution and persistence for any Laravel Socialite driver."
     },
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/lenrsmith/laravel-passport-socialite"
+        }
+    ],
     "require": {
         "illuminate/support": "~5.7 || ^6.0 || ^7.0",
+        "schedula/laravel-passport-socialite": "dev-hotfix/illuminate-support-dependency-fix",
         "laravel/socialite": "^4.3",
         "firebase/php-jwt": "~5.2"
     },

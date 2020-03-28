@@ -119,9 +119,12 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
      */
     protected function getUserByToken($token)
     {
-        $claims = explode('.', $token)[1];
-
-        return json_decode(base64_decode($claims), true);
+        $data = $this->decodeJwt($token);
+        if ($this->verifyJwtData($data)) {
+            return $data;
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -255,20 +258,20 @@ class SignInWithAppleProvider extends AbstractProvider implements ProviderInterf
      * @return User
      * @throws \Exception
      */
-    public function userFromJwt($jwt)
-    {
-        $data = $this->decodeJwt($jwt);
-        if ($this->verifyJwtData($data)) {
-
-            return (new User)
-                ->setToken($jwt)
-                ->map([
-                    "id" => $data["sub"],
-                    "name" => '',
-                    "email" => $data["email"]
-                ]);
-        } else {
-            return null;
-        }
-    }
+//    public function userFromJwt($jwt)
+//    {
+//        $data = $this->decodeJwt($jwt);
+//        if ($this->verifyJwtData($data)) {
+//
+//            return (new User)
+//                ->setToken($jwt)
+//                ->map([
+//                    "id" => $data["sub"],
+//                    "name" => '',
+//                    "email" => $data["email"]
+//                ]);
+//        } else {
+//            return null;
+//        }
+//    }
 }
