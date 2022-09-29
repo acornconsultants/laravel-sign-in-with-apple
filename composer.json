@@ -18,13 +18,13 @@
     "repositories": [
         {
             "type": "git",
-            "url": "https://github.com/lenrsmith/laravel-passport-socialite"
+            "url": "https://github.com/acornconsultants/laravel-passport-socialite"
         }
     ],
     "require": {
-        "illuminate/support": "~5.7 || ^6.0 || ^7.0",
-        "schedula/laravel-passport-socialite": "dev-hotfix/illuminate-support-dependency-fix",
-        "laravel/socialite": "^4.3",
+        "illuminate/support": "~5.7 || ^6.0 || ^7.0 || ^8.0 || ^9.0",
+        "schedula/laravel-passport-socialite": "dev-hotfix/dependency-fixes",
+        "laravel/socialite": "^4.3 || ^5.0",
         "firebase/php-jwt": "~5.2"
     },
     "require-dev": {
